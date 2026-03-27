@@ -22,16 +22,59 @@
   render();
 
   function createEmptyProject() {
-    return {
-      version: 2,
+    return normalizeProject({
+      version: 3,
       meta: { competition: '', date: '', teamA: 'Equipo A', teamB: 'Equipo B' },
-      rules: { bestOf: 5, setsToWin: 3, regularSetPoints: 25, finalSetPoints: 15, winByTwo: true, specialMode: false },
+      rules: {
+        bestOf: 5,
+        setsToWin: 3,
+        regularSetPoints: 25,
+        finalSetPoints: 15,
+        winByTwo: true,
+        specialMode: false,
+        decidingSetNumber: 5,
+        decidingSetServeByDraw: true,
+      },
       initial: { firstServer: 'A', startSet: 1, startScoreA: 0, startScoreB: 0, startSetsA: 0, startSetsB: 0 },
+      setStartServerOverrides: {},
       videoFingerprint: null,
       rallies: [],
       manualSetEnds: [],
       savedAt: null,
+    });
+  }
+
+  function normalizeProject(project) {
+    const normalized = structuredClone(project || {});
+    normalized.version = Math.max(3, normalized.version || 1);
+    normalized.meta = {
+      competition: '', date: '', teamA: 'Equipo A', teamB: 'Equipo B',
+      ...(normalized.meta || {}),
     };
+    normalized.rules = {
+      bestOf: 5,
+      setsToWin: 3,
+      regularSetPoints: 25,
+      finalSetPoints: 15,
+      winByTwo: true,
+      specialMode: false,
+      decidingSetNumber: normalized.rules?.bestOf || 5,
+      decidingSetServeByDraw: true,
+      ...(normalized.rules || {}),
+    };
+    normalized.initial = {
+      firstServer: 'A', startSet: 1, startScoreA: 0, startScoreB: 0, startSetsA: 0, startSetsB: 0,
+      ...(normalized.initial || {}),
+    };
+    normalized.setStartServerOverrides = { ...(normalized.setStartServerOverrides || {}) };
+    normalized.rallies = (normalized.rallies || []).map(r => ({ note: '', ...r }));
+    normalized.manualSetEnds = normalized.manualSetEnds || [];
+    normalized.videoFingerprint = normalized.videoFingerprint || null;
+    normalized.savedAt = normalized.savedAt || null;
+    if (!normalized.rules.decidingSetNumber || normalized.rules.decidingSetNumber < normalized.initial.startSet) {
+      normalized.rules.decidingSetNumber = normalized.rules.bestOf || 5;
+    }
+    return normalized;
   }
 
   function render() {
@@ -42,6 +85,8 @@
     const currentState = getCurrentState();
     const projectName = `${state.project.meta.teamA} vs ${state.project.meta.teamB}`;
     const lockLabel = state.overlayLocked ? 'Desbloquear overlay' : 'Bloquear overlay';
+    const serverLabel = getTeamLabel(currentState.server);
+    const serverHelp = getServerHelpText(currentState.setNumber, currentState.serverSource);
     app.innerHTML = `
       <div class="app-shell">
         <div class="topbar">
@@ -58,9 +103,23 @@
           <div class="video-area">
             <div class="video-panel">
               <div class="video-header">
-                <div class="muted">${escapeHtml(projectName)}</div>
-                <div class="muted">Saca ahora: <strong>${currentState.server === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)}</strong></div>
+                <div>
+                  <div class="muted">${escapeHtml(projectName)}</div>
+                  <div class="muted">Saca ahora: <strong>${escapeHtml(serverLabel)}</strong></div>
+                </div>
+                <div class="muted video-header-note">${escapeHtml(serverHelp)}</div>
               </div>
+              ${currentState.server == null ? `
+                <div class="server-prompt card-lite">
+                  <div>
+                    <strong>Asigna el sacador inicial del set ${currentState.setNumber}</strong>
+                    <div class="muted">${escapeHtml(getSetAssignmentPrompt(currentState.setNumber))}</div>
+                  </div>
+                  <div class="log-actions">
+                    <button id="assignCurrentSetServerABtn" class="success">${escapeHtml(state.project.meta.teamA)}</button>
+                    <button id="assignCurrentSetServerBBtn" class="primary">${escapeHtml(state.project.meta.teamB)}</button>
+                  </div>
+                </div>` : ''}
               <div class="video-wrap" id="videoWrap">
                 <video id="video" preload="metadata"></video>
                 <div class="video-overlay">
@@ -156,8 +215,8 @@
                 </div>
                 <div class="card">
                   <div class="muted">Próximo servicio esperado</div>
-                  <div style="margin-top:6px; font-size:18px; font-weight:800;">${currentState.server === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)}</div>
-                  <div class="muted" style="margin-top:6px;">Deducido automáticamente a partir del ganador del rally.</div>
+                  <div style="margin-top:6px; font-size:18px; font-weight:800;">${escapeHtml(serverLabel)}</div>
+                  <div class="muted" style="margin-top:6px;">${escapeHtml(serverHelp)}</div>
                 </div>
               </div>
 
@@ -245,9 +304,17 @@
                         <div><label>Sets normales</label><input id="regularSetPointsInput" type="number" min="1" value="${state.project.rules.regularSetPoints}" /></div>
                         <div><label>Set final</label><input id="finalSetPointsInput" type="number" min="1" value="${state.project.rules.finalSetPoints}" /></div>
                       </div>
-                      <div class="row" style="margin-top:10px;">
-                        <div><label>Sacador inicial</label><select id="firstServerInput"><option value="A" ${state.project.initial.firstServer==='A'?'selected':''}>${escapeHtml(state.project.meta.teamA)}</option><option value="B" ${state.project.initial.firstServer==='B'?'selected':''}>${escapeHtml(state.project.meta.teamB)}</option></select></div>
+                      <div class="row-3" style="margin-top:10px;">
+                        <div><label>Sacador inicial set ${state.project.initial.startSet}</label><select id="firstServerInput"><option value="A" ${state.project.initial.firstServer==='A'?'selected':''}>${escapeHtml(state.project.meta.teamA)}</option><option value="B" ${state.project.initial.firstServer==='B'?'selected':''}>${escapeHtml(state.project.meta.teamB)}</option></select></div>
+                        <div><label>Set decisivo</label><input id="decidingSetNumberInput" type="number" min="1" step="1" value="${state.project.rules.decidingSetNumber || state.project.rules.bestOf}" /></div>
                         <div><label>FPS por defecto</label><input id="fpsConfigInput" type="number" min="1" step="1" value="${state.frameRate}" /></div>
+                      </div>
+                      <div class="check-row" style="margin-top:10px;">
+                        <label class="checkbox-inline"><input id="decidingSetServeByDrawInput" type="checkbox" ${state.project.rules.decidingSetServeByDraw ? 'checked' : ''} /> El set decisivo comienza con nuevo sorteo de saque</label>
+                      </div>
+                      <div class="server-config-box" style="margin-top:12px;">
+                        <div class="muted">Sacador inicial por set</div>
+                        <div class="server-config-list" style="margin-top:10px;">${renderSetServerConfig()}</div>
                       </div>
                       <div class="log-actions" style="margin-top:10px;"><button id="applyConfigBtn" class="primary">Aplicar configuración</button><button id="manualSetEndBtn" class="warn">Finalizar set manualmente</button></div>
                     </div>
@@ -328,8 +395,7 @@
         alert('JSON no válido.');
         return;
       }
-      state.project = parsed;
-      state.project.rallies = state.project.rallies.map(r => ({ note: '', ...r }));
+      state.project = normalizeProject(parsed);
       state.pendingServeTime = null;
       state.pendingComment = '';
       state.selectedRallyId = null;
@@ -360,6 +426,8 @@
     $('overlayRedoBtn').onclick = redo;
     $('overlayLockBtn').onclick = toggleOverlayLock;
     $('fullscreenBtn').onclick = () => video.requestFullscreen?.();
+    if ($('assignCurrentSetServerABtn')) $('assignCurrentSetServerABtn').onclick = () => assignCurrentSetServer('A');
+    if ($('assignCurrentSetServerBBtn')) $('assignCurrentSetServerBBtn').onclick = () => assignCurrentSetServer('B');
 
     const commentInput = $('pendingCommentInput');
     if (commentInput) commentInput.oninput = (e) => { state.pendingComment = e.target.value; };
@@ -452,11 +520,14 @@
       next.rules.setsToWin = parseInt(document.getElementById('setsToWinInput').value, 10) || Math.ceil(next.rules.bestOf / 2);
       next.rules.regularSetPoints = parseInt(document.getElementById('regularSetPointsInput').value, 10) || 25;
       next.rules.finalSetPoints = parseInt(document.getElementById('finalSetPointsInput').value, 10) || 15;
+      next.rules.decidingSetNumber = parseInt(document.getElementById('decidingSetNumberInput').value, 10) || next.rules.bestOf || 5;
+      next.rules.decidingSetServeByDraw = !!document.getElementById('decidingSetServeByDrawInput').checked;
       next.initial.firstServer = document.getElementById('firstServerInput').value;
+      next.setStartServerOverrides = collectSetServerOverrides(next.rules.bestOf);
       const fps = parseInt(document.getElementById('fpsConfigInput').value, 10);
       if (fps > 0) state.frameRate = fps;
       pushUndo();
-      state.project = next;
+      state.project = normalizeProject(next);
       render();
     };
     const manualBtn = document.getElementById('manualSetEndBtn');
@@ -503,6 +574,11 @@
 
   function markServe() {
     if (state.overlayLocked) return;
+    const current = getCurrentState();
+    if (current.server == null) {
+      alert(`Antes de registrar el saque debes asignar el sacador inicial del set ${current.setNumber}.`);
+      return;
+    }
     const video = document.getElementById('video');
     if (!Number.isFinite(video.currentTime)) {
       alert('Carga un vídeo antes de registrar un saque.');
@@ -514,6 +590,11 @@
 
   function registerWinner(winner) {
     if (state.overlayLocked) return;
+    const current = getCurrentState();
+    if (current.server == null) {
+      alert(`Antes de asignar el punto debes fijar el sacador inicial del set ${current.setNumber}.`);
+      return;
+    }
     if (state.pendingServeTime == null) {
       alert('Primero debes marcar el instante del saque.');
       return;
@@ -621,16 +702,35 @@
   }
   function stepFrame(frames) { stepTime(frames / (state.frameRate || 30)); }
 
+  function assignCurrentSetServer(server) {
+    const current = getCurrentState();
+    pushUndo();
+    state.project.setStartServerOverrides = { ...(state.project.setStartServerOverrides || {}), [String(current.setNumber)]: server };
+    render();
+  }
+
+  function collectSetServerOverrides(maxSets) {
+    const overrides = {};
+    for (let set = state.project.initial.startSet || 1; set <= maxSets; set += 1) {
+      const input = document.getElementById(`setServerOverride_${set}`);
+      if (!input) continue;
+      if (input.value === 'A' || input.value === 'B') overrides[String(set)] = input.value;
+    }
+    return overrides;
+  }
+
   function getCurrentState() {
     const list = computeRallyStates();
     if (!list.length) {
+      const serverInfo = getSetStartServerInfo(state.project.initial.startSet || 1);
       return {
         setNumber: state.project.initial.startSet,
         scoreA: state.project.initial.startScoreA,
         scoreB: state.project.initial.startScoreB,
         setsA: state.project.initial.startSetsA,
         setsB: state.project.initial.startSetsB,
-        server: state.project.initial.firstServer,
+        server: serverInfo.server,
+        serverSource: serverInfo.source,
       };
     }
     const last = list[list.length - 1];
@@ -641,6 +741,7 @@
       setsA: last.nextSetsA,
       setsB: last.nextSetsB,
       server: last.nextServer,
+      serverSource: last.nextServerSource,
     };
   }
 
@@ -650,18 +751,21 @@
     let scoreB = state.project.initial.startScoreB || 0;
     let setsA = state.project.initial.startSetsA || 0;
     let setsB = state.project.initial.startSetsB || 0;
-    let server = state.project.initial.firstServer || 'A';
+    let serverInfo = getSetStartServerInfo(setNumber);
 
     const out = [];
     for (let i = 0; i < state.project.rallies.length; i++) {
       const rally = state.project.rallies[i];
+      const serverBefore = serverInfo.server;
+      const serverSource = serverInfo.source;
       if (rally.winner === 'A') scoreA += 1; else scoreB += 1;
-      server = rally.winner;
       let nextSetNumber = setNumber;
       let nextScoreA = scoreA;
       let nextScoreB = scoreB;
       let nextSetsA = setsA;
       let nextSetsB = setsB;
+      let nextServer = rally.winner;
+      let nextServerSource = 'rally_winner';
       let setEnded = false;
       let endedByManual = false;
 
@@ -678,6 +782,9 @@
         nextSetNumber += 1;
         nextScoreA = 0;
         nextScoreB = 0;
+        const nextInfo = getSetStartServerInfo(nextSetNumber);
+        nextServer = nextInfo.server;
+        nextServerSource = nextInfo.source;
       }
 
       out.push({
@@ -689,13 +796,15 @@
         scoreB,
         setsA,
         setsB,
-        serverBefore: i === 0 ? (state.project.initial.firstServer || 'A') : out[i - 1].nextServer,
+        serverBefore,
+        serverSource,
         nextSetNumber,
         nextScoreA,
         nextScoreB,
         nextSetsA,
         nextSetsB,
-        nextServer: server,
+        nextServer,
+        nextServerSource,
         setEnded,
         endedByManual,
       });
@@ -705,17 +814,81 @@
       scoreB = nextScoreB;
       setsA = nextSetsA;
       setsB = nextSetsB;
+      serverInfo = { server: nextServer, source: nextServerSource };
     }
     return out;
   }
 
   function isSetWon(scoreA, scoreB, setNumber) {
-    const maxSets = state.project.rules.bestOf || 5;
-    const isFinalSet = setNumber === maxSets;
+    const decidingSetNumber = getDecidingSetNumber();
+    const isFinalSet = setNumber === decidingSetNumber;
     const target = isFinalSet ? state.project.rules.finalSetPoints : state.project.rules.regularSetPoints;
     const maxScore = Math.max(scoreA, scoreB);
     const minScore = Math.min(scoreA, scoreB);
     return maxScore >= target && (!state.project.rules.winByTwo || maxScore - minScore >= 2);
+  }
+
+  function getDecidingSetNumber() {
+    return Math.max(state.project.initial.startSet || 1, parseInt(state.project.rules.decidingSetNumber, 10) || state.project.rules.bestOf || 5);
+  }
+
+  function getSetStartServerInfo(setNumber) {
+    const key = String(setNumber);
+    const overrides = state.project.setStartServerOverrides || {};
+    if (overrides[key] === 'A' || overrides[key] === 'B') return { server: overrides[key], source: 'manual' };
+    if (setNumber === (state.project.initial.startSet || 1)) return { server: state.project.initial.firstServer || 'A', source: 'initial' };
+    if (state.project.rules.decidingSetServeByDraw && setNumber === getDecidingSetNumber()) return { server: null, source: 'draw_required' };
+    const previous = getSetStartServerInfo(setNumber - 1);
+    if (previous.server == null) return { server: null, source: 'pending_previous' };
+    return { server: oppositeTeam(previous.server), source: 'alternated' };
+  }
+
+  function getTeamLabel(team) {
+    if (team === 'A') return state.project.meta.teamA;
+    if (team === 'B') return state.project.meta.teamB;
+    return 'Pendiente de asignar';
+  }
+
+  function getServerHelpText(setNumber, source) {
+    if (source === 'manual') return `Sacador inicial del set ${setNumber} fijado manualmente.`;
+    if (source === 'draw_required') return `Set ${setNumber} configurado como decisivo: hace falta asignar el saque por sorteo.`;
+    if (source === 'alternated') return `Sacador inicial del set ${setNumber} alternado respecto al set anterior.`;
+    if (source === 'initial') return `Sacador inicial base del partido.`;
+    if (source === 'pending_previous') return `Hay un set anterior sin sacador inicial asignado.`;
+    return 'Deducido automáticamente a partir del ganador del rally.';
+  }
+
+  function getSetAssignmentPrompt(setNumber) {
+    return setNumber === getDecidingSetNumber() && state.project.rules.decidingSetServeByDraw
+      ? 'Este set está marcado como decisivo y requiere asignación manual tras el sorteo.'
+      : 'Puedes fijarlo manualmente para este set si quieres sobrescribir el cálculo automático.';
+  }
+
+  function oppositeTeam(team) { return team === 'A' ? 'B' : 'A'; }
+
+  function renderSetServerConfig() {
+    const maxSets = Math.max(state.project.rules.bestOf || 5, getDecidingSetNumber());
+    const rows = [];
+    for (let set = state.project.initial.startSet || 1; set <= maxSets; set += 1) {
+      const info = getSetStartServerInfo(set);
+      const override = (state.project.setStartServerOverrides || {})[String(set)] || (set === (state.project.initial.startSet || 1) ? state.project.initial.firstServer : 'AUTO');
+      const autoLabel = info.server ? `${getTeamLabel(info.server)} (${info.source === 'alternated' ? 'alternado' : 'auto'})` : 'Pendiente de asignar';
+      rows.push(`
+        <div class="set-server-row">
+          <div>
+            <strong>Set ${set}</strong>
+            <div class="muted">${escapeHtml(set === getDecidingSetNumber() && state.project.rules.decidingSetServeByDraw ? 'Set decisivo / sorteo' : 'Set ordinario')}</div>
+          </div>
+          <div class="set-server-select-wrap">
+            <select id="setServerOverride_${set}">
+              ${set === (state.project.initial.startSet || 1)
+                ? `<option value="A" ${override==='A'?'selected':''}>${escapeHtml(state.project.meta.teamA)}</option><option value="B" ${override==='B'?'selected':''}>${escapeHtml(state.project.meta.teamB)}</option>`
+                : `<option value="AUTO" ${override==='AUTO'?'selected':''}>Auto · ${escapeHtml(autoLabel)}</option><option value="A" ${override==='A'?'selected':''}>${escapeHtml(state.project.meta.teamA)}</option><option value="B" ${override==='B'?'selected':''}>${escapeHtml(state.project.meta.teamB)}</option>`}
+            </select>
+          </div>
+        </div>`);
+    }
+    return rows.join('');
   }
 
   function renderRecentRallies(n) {
@@ -738,7 +911,7 @@
           <div><strong>Set ${r.setNumber} · ${r.scoreA}-${r.scoreB}</strong></div>
           <div class="muted">${formatTime(r.serveTime)}</div>
         </div>
-        <div class="muted">Rally ${r.index + 1} · saca ${r.serverBefore === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)} · punto para ${r.winner === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)}${r.setEnded ? ' · fin de set' : ''}</div>
+        <div class="muted">Rally ${r.index + 1} · saca ${escapeHtml(getTeamLabel(r.serverBefore))} · punto para ${escapeHtml(getTeamLabel(r.winner))}${r.setEnded ? ' · fin de set' : ''}</div>
         ${r.note ? `<div style="margin-top:6px;">${escapeHtml(r.note)}</div>` : ''}
         ${compact ? '' : `<div class="log-actions"><button class="select-rally-btn small" data-id="${r.id}">Editar</button><button class="jump-rally-btn small" data-id="${r.id}">Ir al saque</button></div>`}
       </div>
@@ -775,7 +948,7 @@
 
   function exportCsv() {
     const rows = computeRallyStates();
-    const headers = ['rally','set','score_a','score_b','sets_a','sets_b','serve_time','server_before','winner','comment','set_ended','manual_set_end','team_a','team_b'];
+    const headers = ['rally','set','score_a','score_b','sets_a','sets_b','serve_time','server_before','server_before_label','winner','winner_label','comment','set_ended','manual_set_end','team_a','team_b'];
     const csv = [headers.join(',')].concat(rows.map(r => [
       r.index + 1,
       r.setNumber,
@@ -784,8 +957,10 @@
       r.setsA,
       r.setsB,
       r.serveTime,
-      r.serverBefore,
+      r.serverBefore || '',
+      csvEscape(getTeamLabel(r.serverBefore)),
       r.winner,
+      csvEscape(getTeamLabel(r.winner)),
       csvEscape(r.note || ''),
       r.setEnded ? 1 : 0,
       r.endedByManual ? 1 : 0,
@@ -820,13 +995,13 @@
   function undo() {
     if (!state.undoStack.length) return;
     state.redoStack.push(JSON.stringify(state.project));
-    state.project = JSON.parse(state.undoStack.pop());
+    state.project = normalizeProject(JSON.parse(state.undoStack.pop()));
     render();
   }
   function redo() {
     if (!state.redoStack.length) return;
     state.undoStack.push(JSON.stringify(state.project));
-    state.project = JSON.parse(state.redoStack.pop());
+    state.project = normalizeProject(JSON.parse(state.redoStack.pop()));
     render();
   }
 

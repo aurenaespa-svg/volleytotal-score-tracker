@@ -18,6 +18,10 @@ Aplicación web local para análisis de partidos de voleibol mediante vídeo, pe
   - salto por frame
   - saltos temporales
 - 🧠 Deducción automática del turno de saque
+
+- 🔁 Alternancia automática del sacador inicial entre sets ordinarios
+- 🎲 Asignación manual del sacador inicial en el set decisivo con nuevo sorteo
+- ✍️ Sobrescritura manual del sacador inicial por set para casos especiales
 - 💬 Comentarios asociados a cada rally
 - 💾 Exportación:
   - JSON (proyecto completo)
