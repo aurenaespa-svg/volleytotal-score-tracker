@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VolleyTotal Score Tracker</title>
+  <style>
+
+:root {
+  --bg: #0b1120;
+  --panel: #131c2f;
+  --panel-2: #0f1727;
+  --muted: #94a3b8;
+  --text: #f8fafc;
+  --accent: #f59e0b;
+  --accent-2: #2563eb;
+  --accent-3: #0ea5e9;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --border: #243047;
+  --shadow: 0 10px 30px rgba(0,0,0,.28);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: linear-gradient(180deg, #08101d, #0b1120 28%, #0b1120);
+  color: var(--text);
+}
+button, input, select, textarea { font: inherit; }
+button {
+  background: #22314c;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: transform .12s ease, filter .12s ease, background .12s ease;
+}
+button:hover { filter: brightness(1.08); }
+button:active { transform: translateY(1px); }
+button.primary { background: var(--accent-2); }
+button.success { background: var(--success); color: #04140b; font-weight: 800; }
+button.danger { background: var(--danger); }
+button.warn { background: var(--warn); color: #281700; font-weight: 700; }
+button.ghost { background: rgba(15,23,39,.56); }
+button.small { padding: 6px 9px; font-size: 13px; }
+button.icon {
+  width: 42px; height: 42px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 18px; border-radius: 999px;
+}
+input, select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #0a1220;
+  color: var(--text);
+}
+textarea { resize: vertical; min-height: 74px; }
+label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+small, .muted { color: var(--muted); }
+.hidden { display: none !important; }
+.app-shell { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; }
+.topbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px 8px; border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(6, 10, 20, .7); backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 20;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-logo {
+  height: 38px; width: auto; display: block; object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.2));
+}
+.brand-copy { min-width: 0; }
+.brand-copy h1 { margin: 0; font-size: 18px; line-height: 1.15; }
+.brand-copy .muted { font-size: 12px; }
+.main {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+.video-area { padding: 10px 12px 0; }
+.video-panel, .control-panel {
+  background: rgba(19,28,47,.96);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+.video-panel {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  overflow: visible;
+  width: fit-content;
+  max-width: 100%;
+}
+.video-header {
+  display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  padding: 10px 12px 6px;
+}
+.video-wrap {
+  background: black;
+  position: relative;
+  min-width: 360px;
+  min-height: 220px;
+  width: min(100%, 960px);
+  height: min(58vh, 540px);
+  resize: both;
+  overflow: hidden;
+  border-radius: 14px;
+  margin: 0 12px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+video {
+  width: 100%; height: 100%; object-fit: contain; background: black;
+}
+.video-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 8px;
+  pointer-events: none;
+}
+.overlay-top, .overlay-bottom {
+  display: flex; justify-content: space-between; gap: 8px; align-items: flex-start;
+}
+.overlay-actions {
+  pointer-events: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+}
+.compact-top { align-items: flex-start; }
+.compact-actions { max-width: 70%; }
+.overlay-chip {
+  background: rgba(10, 16, 30, .72);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  line-height: 1.1;
+  backdrop-filter: blur(6px);
+}
+.status-chip.pending { border-color: rgba(245,158,11,.45); }
+.status-chip.ready { border-color: rgba(34,197,94,.45); }
+.compact-bottom { align-items: flex-end; position: relative; }
+.overlay-dock {
+  width: 100%;
+  pointer-events: auto;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  background: rgba(7, 12, 22, .62);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px;
+  padding: 6px 8px;
+  backdrop-filter: blur(8px);
+}
+.overlay-dock.locked { opacity: .82; }
+.overlay-dock-main, .overlay-dock-side {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.compact-btn {
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.compact-btn span { margin-left: 4px; }
+.compact-team {
+  max-width: 160px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.serve-btn {
+  background: var(--warn); color: #241500; border-color: rgba(0,0,0,.15); font-weight: 800;
+}
+.mini-icon {
+  width: 34px; height: 34px; font-size: 15px;
+  border-radius: 999px;
+}
+.lock-btn.locked { background: rgba(239,68,68,.9); }
+.overlay-comment-pop {
+  position: absolute;
+  right: 0;
+  bottom: 48px;
+  width: min(330px, 62%);
+  pointer-events: auto;
+  background: rgba(7, 12, 22, .82);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
+  padding: 8px;
+  backdrop-filter: blur(8px);
+}
+.overlay-comment-pop.locked { opacity: .82; }
+.overlay-comment-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.overlay-comment-pop textarea {
+  background: rgba(10,18,32,.92);
+  min-height: 64px;
+  padding: 8px 10px;
+}
+.comment-status { margin-top: 6px; font-size: 12px; }
+.hide-md, .hide-sm { display: inline-flex; }
+.scrub-bar {
+  display: grid; grid-template-columns: 88px 1fr 88px; gap: 10px; align-items: center;
+  padding: 10px 12px 8px;
+}
+.range-time { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.controls-grid {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding: 0 12px 12px;
+}
+.controls-grid select, .controls-grid input { width: auto; min-width: 88px; }
+.bottom-area { padding: 10px 12px 12px; min-height: 0; }
+.control-panel {
+  display: grid; grid-template-rows: auto auto 1fr;
+  gap: 10px; padding: 12px; min-height: 0;
+}
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tab-btn.active { background: var(--accent-2); }
+.summary {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(220px, .75fr) minmax(220px, .75fr);
+  gap: 10px;
+}
+.card {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 16px; padding: 12px;
+}
+.score-strip {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.score-big { font-size: clamp(20px, 3vw, 30px); font-weight: 900; margin: 3px 0; }
+.sets-big { font-size: 18px; font-weight: 800; }
+.team-line { display: flex; justify-content: space-between; gap: 8px; }
+.content-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 12px; min-height: 280px; }
+.stack { display: grid; gap: 12px; min-height: 0; }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.row-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.row-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.capture-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.log-list, .match-list { max-height: 380px; overflow: auto; display: grid; gap: 8px; }
+.log-item, .match-item {
+  background: #0a1220; border: 1px solid var(--border); border-radius: 14px; padding: 10px;
+}
+.log-item.active { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2) inset; }
+.log-top { display: flex; justify-content: space-between; gap: 10px; }
+.log-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.footer { padding: 8px 16px 16px; color: var(--muted); font-size: 12px; }
+.empty { border: 1px dashed var(--border); border-radius: 14px; padding: 16px; color: var(--muted); }
+.credit-box details { background: #0a1220; border: 1px solid var(--border); border-radius: 14px; padding: 8px 10px; }
+.credit-box summary { cursor: pointer; color: var(--muted); }
+.credit-box .credit-copy { margin-top: 10px; color: var(--text); }
+hr.sep { border: none; border-top: 1px solid var(--border); margin: 0; }
+@media (max-width: 1100px) {
+  .summary { grid-template-columns: 1fr; }
+  .content-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .hide-md { display: none; }
+  .compact-team { max-width: 124px; }
+}
+@media (max-width: 720px) {
+  .row, .row-4, .row-3, .capture-buttons { grid-template-columns: 1fr; }
+  .video-wrap { min-width: 280px; width: 100%; height: 42vh; }
+  .scrub-bar { grid-template-columns: 72px 1fr 72px; }
+  .hide-sm { display: none; }
+  .overlay-dock { padding: 5px 6px; }
+  .overlay-dock-main { gap: 5px; }
+  .compact-btn { padding: 6px 8px; font-size: 12px; }
+  .compact-team { max-width: 96px; }
+  .overlay-comment-pop { width: min(300px, 80%); bottom: 44px; }
+}
+
+</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+
+(() => {
+  const LOGO_SRC = 'data:image/png;base64,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';
+  const state = {
+    project: createEmptyProject(),
+    videoFile: null,
+    videoUrl: null,
+    activeTab: 'operacion',
+    selectedRallyId: null,
+    pendingServeTime: null,
+    pendingComment: '',
+    overlayLocked: false,
+    showCommentBox: false,
+    undoStack: [],
+    redoStack: [],
+    playbackRates: [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8],
+    frameRate: 30,
+    lastLoadedProjectName: '',
+  };
+
+  const app = document.getElementById('app');
+  render();
+
+  function createEmptyProject() {
+    return {
+      version: 2,
+      meta: { competition: '', date: '', teamA: 'Equipo A', teamB: 'Equipo B' },
+      rules: { bestOf: 5, setsToWin: 3, regularSetPoints: 25, finalSetPoints: 15, winByTwo: true, specialMode: false },
+      initial: { firstServer: 'A', startSet: 1, startScoreA: 0, startScoreB: 0, startSetsA: 0, startSetsB: 0 },
+      videoFingerprint: null,
+      rallies: [],
+      manualSetEnds: [],
+      savedAt: null,
+    };
+  }
+
+  function render() {
+    const prevVideo = document.getElementById('video');
+    const rememberedTime = prevVideo ? prevVideo.currentTime || 0 : 0;
+    const rememberedPaused = prevVideo ? prevVideo.paused : true;
+    const rememberedRate = prevVideo ? prevVideo.playbackRate : 1;
+    const currentState = getCurrentState();
+    const projectName = `${state.project.meta.teamA} vs ${state.project.meta.teamB}`;
+    const lockLabel = state.overlayLocked ? 'Desbloquear overlay' : 'Bloquear overlay';
+    app.innerHTML = `
+      <div class="app-shell">
+        <div class="topbar">
+          <div class="brand">
+            <img class="brand-logo" src="${LOGO_SRC}" alt="VolleyTotal" />
+            <div class="brand-copy">
+              <h1>VolleyTotal Score Tracker</h1>
+              <div class="muted">Saque → comentario opcional → ganador del rally → marcador y turnos automáticos</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="main">
+          <div class="video-area">
+            <div class="video-panel">
+              <div class="video-header">
+                <div class="muted">${escapeHtml(projectName)}</div>
+                <div class="muted">Saca ahora: <strong>${currentState.server === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)}</strong></div>
+              </div>
+              <div class="video-wrap" id="videoWrap">
+                <video id="video" preload="metadata"></video>
+                <div class="video-overlay">
+                  <div class="overlay-top compact-top">
+                    <div class="overlay-actions compact-actions">
+                      <div class="overlay-chip">Set ${currentState.setNumber} · ${currentState.scoreA}-${currentState.scoreB}</div>
+                      <div class="overlay-chip hide-sm">Sets ${currentState.setsA}-${currentState.setsB}</div>
+                      <div class="overlay-chip hide-md">FPS ${state.frameRate}</div>
+                    </div>
+                    <div class="overlay-actions compact-actions">
+                      <div class="overlay-chip status-chip ${state.pendingServeTime == null ? 'pending' : 'ready'}">${state.pendingServeTime == null ? 'Saque pendiente' : `Saque ${formatTime(state.pendingServeTime)}`}</div>
+                    </div>
+                  </div>
+                  <div class="overlay-bottom compact-bottom">
+                    ${state.showCommentBox ? `
+                    <div class="overlay-comment-pop ${state.overlayLocked ? 'locked' : ''}">
+                      <div class="overlay-comment-head">
+                        <strong>Comentario</strong>
+                        <button id="overlayCommentCloseBtn" class="icon ghost mini-icon" title="Ocultar comentario">✕</button>
+                      </div>
+                      <textarea id="pendingCommentInput" placeholder="Comentario opcional antes de asignar el ganador..." ${state.overlayLocked ? 'disabled' : ''}>${escapeHtml(state.pendingComment)}</textarea>
+                      <div class="muted comment-status">${state.pendingServeTime == null ? 'Añade el comentario y marca después el saque.' : `Saque marcado en ${formatTime(state.pendingServeTime)}.`}</div>
+                    </div>` : ''}
+                    <div class="overlay-dock ${state.overlayLocked ? 'locked' : ''}">
+                      <div class="overlay-dock-main">
+                        <button id="overlayServeBtn" class="serve-btn compact-btn" title="Marcar instante del saque (S)" ${state.overlayLocked ? 'disabled' : ''}>🎯<span>Saque</span></button>
+                        <button id="overlayWinnerABtn" class="success compact-btn compact-team" title="Punto para ${escapeAttr(state.project.meta.teamA)} (A)" ${state.overlayLocked ? 'disabled' : ''}>${escapeHtml(state.project.meta.teamA)}</button>
+                        <button id="overlayWinnerBBtn" class="primary compact-btn compact-team" title="Punto para ${escapeAttr(state.project.meta.teamB)} (L)" ${state.overlayLocked ? 'disabled' : ''}>${escapeHtml(state.project.meta.teamB)}</button>
+                      </div>
+                      <div class="overlay-dock-side">
+                        <button id="overlayCommentToggleBtn" class="icon ghost mini-icon" title="Mostrar u ocultar comentario" ${state.overlayLocked ? 'disabled' : ''}>💬</button>
+                        <button id="overlayFixBtn" class="icon ghost mini-icon" title="Corregir último rally">↺</button>
+                        <button id="overlayUndoBtn" class="icon ghost mini-icon" title="Deshacer">↶</button>
+                        <button id="overlayRedoBtn" class="icon ghost mini-icon" title="Rehacer">↷</button>
+                        <button id="overlayLockBtn" class="icon ghost mini-icon lock-btn ${state.overlayLocked ? 'locked' : ''}" title="${lockLabel}">${state.overlayLocked ? '🔒' : '🔓'}</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="scrub-bar">
+                <div class="range-time" id="currentTimeLabel">00:00.000</div>
+                <input id="seekRange" type="range" min="0" max="1000" value="0" />
+                <div class="range-time" id="durationLabel">00:00.000</div>
+              </div>
+              <div class="controls-grid">
+                <button id="playPauseBtn" class="icon ghost" title="Reproducir / Pausar">▶</button>
+                <button id="back1sBtn" class="icon ghost" title="Retroceder 1 segundo">⟲1</button>
+                <button id="fwd1sBtn" class="icon ghost" title="Avanzar 1 segundo">1⟳</button>
+                <button id="back5sBtn" class="icon ghost" title="Retroceder 5 segundos">⟲5</button>
+                <button id="fwd5sBtn" class="icon ghost" title="Avanzar 5 segundos">5⟳</button>
+                <button id="backFrameBtn" class="icon ghost" title="Retroceder 1 fotograma">⟪</button>
+                <button id="fwdFrameBtn" class="icon ghost" title="Avanzar 1 fotograma">⟫</button>
+                <select id="rateSelect" title="Velocidad de reproducción">
+                  ${state.playbackRates.map(r => `<option value="${r}" ${r===rememberedRate?'selected':''}>${String(r).replace('.', ',')}x</option>`).join('')}
+                </select>
+                <input id="fpsInput" type="number" min="1" step="1" value="${state.frameRate}" title="FPS para salto por fotogramas" />
+                <button id="fullscreenBtn" class="ghost" title="Pantalla completa">Pantalla completa</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-area">
+            <div class="control-panel">
+              <div class="tabs">
+                <button class="tab-btn ${state.activeTab==='operacion'?'active':''}" data-tab="operacion">Operación</button>
+                <button class="tab-btn ${state.activeTab==='gestion'?'active':''}" data-tab="gestion">Búsqueda / Edición / Archivos</button>
+                <button class="tab-btn ${state.activeTab==='config'?'active':''}" data-tab="config">Configuración</button>
+              </div>
+
+              <div class="summary">
+                <div class="card">
+                  <div class="score-strip">
+                    <div>
+                      <div class="muted">Marcador</div>
+                      <div class="score-big">${currentState.scoreA}-${currentState.scoreB}</div>
+                    </div>
+                    <div>
+                      <div class="muted">Sets</div>
+                      <div class="sets-big">${currentState.setsA}-${currentState.setsB}</div>
+                    </div>
+                    <div>
+                      <div class="muted">Set actual</div>
+                      <div class="sets-big">${currentState.setNumber}</div>
+                    </div>
+                  </div>
+                  <div class="team-line"><span>${escapeHtml(state.project.meta.teamA)}</span><span>${escapeHtml(state.project.meta.teamB)}</span></div>
+                </div>
+                <div class="card">
+                  <div class="muted">Vídeo cargado</div>
+                  <div style="margin-top:6px; font-weight:700;">${state.videoFile ? escapeHtml(state.videoFile.name) : 'Ninguno'}</div>
+                  <div class="muted" style="margin-top:6px;">${videoMetaLabel()}</div>
+                </div>
+                <div class="card">
+                  <div class="muted">Próximo servicio esperado</div>
+                  <div style="margin-top:6px; font-size:18px; font-weight:800;">${currentState.server === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)}</div>
+                  <div class="muted" style="margin-top:6px;">Deducido automáticamente a partir del ganador del rally.</div>
+                </div>
+              </div>
+
+              <div id="tab-operacion" class="tab-panel ${state.activeTab==='operacion'?'':'hidden'}">
+                <div class="content-grid">
+                  <div class="stack">
+                    <div class="card">
+                      <div class="muted">Últimos rallies</div>
+                      <div class="log-list" style="margin-top:10px;">${renderRecentRallies(8)}</div>
+                    </div>
+                  </div>
+                  <div class="stack">
+                    <div class="card">
+                      <div class="muted">Atajos</div>
+                      <div style="margin-top:10px; display:grid; gap:8px;">
+                        <div><span class="kbd">Espacio</span> reproducir / pausar</div>
+                        <div><span class="kbd">S</span> marcar saque</div>
+                        <div><span class="kbd">A</span> punto para ${escapeHtml(state.project.meta.teamA)}</div>
+                        <div><span class="kbd">L</span> punto para ${escapeHtml(state.project.meta.teamB)}</div>
+                        <div><span class="kbd">← / →</span> ±1 s · <span class="kbd">Shift</span> + flechas = ±1 frame</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="tab-gestion" class="tab-panel ${state.activeTab==='gestion'?'':'hidden'}">
+                <div class="content-grid">
+                  <div class="stack">
+                    <div class="card">
+                      <div class="muted">Archivos</div>
+                      <div class="log-actions" style="margin-top:10px;">
+                        <button id="newProjectBtn">Nuevo</button>
+                        <button id="saveJsonBtn" class="primary">Guardar JSON</button>
+                        <button id="loadJsonBtn">Cargar JSON</button>
+                        <button id="exportCsvBtn">Exportar CSV</button>
+                        <button id="loadVideoBtn">Cargar vídeo</button>
+                        <input id="videoFileInput" type="file" accept="video/*" class="hidden" />
+                        <input id="jsonFileInput" type="file" accept="application/json,.json" class="hidden" />
+                      </div>
+                    </div>
+                    <div class="card">
+                      <div class="muted">Buscar marcador</div>
+                      <div class="row-4" style="margin-top:10px;">
+                        <div><label>Set</label><input id="searchSet" type="number" min="1" value="${currentState.setNumber}" /></div>
+                        <div><label>Puntos ${escapeHtml(state.project.meta.teamA)}</label><input id="searchA" type="number" min="0" value="${currentState.scoreA}" /></div>
+                        <div><label>Puntos ${escapeHtml(state.project.meta.teamB)}</label><input id="searchB" type="number" min="0" value="${currentState.scoreB}" /></div>
+                        <div style="display:flex; align-items:end;"><button id="searchScoreBtn" class="primary">Buscar</button></div>
+                      </div>
+                      <div id="searchResults" class="match-list" style="margin-top:10px;"></div>
+                    </div>
+                    <div class="card">
+                      <div class="muted">Historial completo</div>
+                      <div class="log-list" style="margin-top:10px;">${renderAllRallies()}</div>
+                    </div>
+                  </div>
+                  <div class="stack">
+                    <div class="card">
+                      <div class="muted">Edición del rally seleccionado</div>
+                      ${renderEditor()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="tab-config" class="tab-panel ${state.activeTab==='config'?'':'hidden'}">
+                <div class="content-grid">
+                  <div class="stack">
+                    <div class="card">
+                      <div class="muted">Metadatos</div>
+                      <div class="row" style="margin-top:10px;">
+                        <div><label>Competición</label><input id="competitionInput" value="${escapeAttr(state.project.meta.competition)}" /></div>
+                        <div><label>Fecha</label><input id="dateInput" type="date" value="${escapeAttr(state.project.meta.date)}" /></div>
+                      </div>
+                      <div class="row" style="margin-top:10px;">
+                        <div><label>Equipo A</label><input id="teamAInput" value="${escapeAttr(state.project.meta.teamA)}" /></div>
+                        <div><label>Equipo B</label><input id="teamBInput" value="${escapeAttr(state.project.meta.teamB)}" /></div>
+                      </div>
+                    </div>
+                    <div class="card">
+                      <div class="muted">Reglas</div>
+                      <div class="row-4" style="margin-top:10px;">
+                        <div><label>Mejor de</label><input id="bestOfInput" type="number" min="1" step="2" value="${state.project.rules.bestOf}" /></div>
+                        <div><label>Sets para ganar</label><input id="setsToWinInput" type="number" min="1" value="${state.project.rules.setsToWin}" /></div>
+                        <div><label>Sets normales</label><input id="regularSetPointsInput" type="number" min="1" value="${state.project.rules.regularSetPoints}" /></div>
+                        <div><label>Set final</label><input id="finalSetPointsInput" type="number" min="1" value="${state.project.rules.finalSetPoints}" /></div>
+                      </div>
+                      <div class="row" style="margin-top:10px;">
+                        <div><label>Sacador inicial</label><select id="firstServerInput"><option value="A" ${state.project.initial.firstServer==='A'?'selected':''}>${escapeHtml(state.project.meta.teamA)}</option><option value="B" ${state.project.initial.firstServer==='B'?'selected':''}>${escapeHtml(state.project.meta.teamB)}</option></select></div>
+                        <div><label>FPS por defecto</label><input id="fpsConfigInput" type="number" min="1" step="1" value="${state.frameRate}" /></div>
+                      </div>
+                      <div class="log-actions" style="margin-top:10px;"><button id="applyConfigBtn" class="primary">Aplicar configuración</button><button id="manualSetEndBtn" class="warn">Finalizar set manualmente</button></div>
+                    </div>
+                  </div>
+                  <div class="stack">
+                    <div class="card credit-box">
+                      <div class="muted">Información</div>
+                      <div style="margin-top:10px;" class="muted">El proyecto se guarda en JSON y puede volver a vincularse al vídeo validando nombre, tamaño y duración. La secuencia completa puede exportarse a CSV con comentarios incluidos.</div>
+                      <div class="credit-box" style="margin-top:12px;">
+                        <details>
+                          <summary>Créditos</summary>
+                          <div class="credit-copy">Aplicación creada por <strong>Aurelio Ureña Espa</strong>, <strong>Universidad de Granada</strong>.</div>
+                        </details>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">Proyecto local en navegador. El vídeo debe seleccionarse manualmente al reabrir un JSON.</div>
+      </div>
+    `;
+
+    bindEvents();
+    const video = document.getElementById('video');
+    if (state.videoUrl && video && video.src !== state.videoUrl) {
+      video.src = state.videoUrl;
+      video.onloadedmetadata = () => {
+        try { video.currentTime = Math.min(rememberedTime, Number.isFinite(video.duration) ? video.duration : rememberedTime); } catch {}
+        video.playbackRate = rememberedRate;
+        syncVideoUI();
+        if (state.project.videoFingerprint) validateCurrentVideoAgainstProject();
+        if (!rememberedPaused) video.play().catch(() => {});
+      };
+    }
+    syncVideoUI();
+  }
+
+  function bindEvents() {
+    const $ = (id) => document.getElementById(id);
+    const video = $('video');
+
+    const byId = ['loadVideoBtn','loadJsonBtn','saveJsonBtn','exportCsvBtn','newProjectBtn'];
+    if ($('loadVideoBtn')) $('loadVideoBtn').onclick = () => $('videoFileInput').click();
+    if ($('loadJsonBtn')) $('loadJsonBtn').onclick = () => $('jsonFileInput').click();
+    if ($('saveJsonBtn')) $('saveJsonBtn').onclick = saveProjectJson;
+    if ($('exportCsvBtn')) $('exportCsvBtn').onclick = exportCsv;
+    if ($('newProjectBtn')) $('newProjectBtn').onclick = () => {
+      if (!confirm('Se creará un proyecto nuevo. ¿Continuar?')) return;
+      state.project = createEmptyProject();
+      state.videoFile = null;
+      if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
+      state.videoUrl = null;
+      state.pendingServeTime = null;
+      state.pendingComment = '';
+      state.selectedRallyId = null;
+      state.undoStack = [];
+      state.redoStack = [];
+      video.removeAttribute('src');
+      render();
+    };
+
+    if ($('videoFileInput')) $('videoFileInput').onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      await loadVideoFile(file);
+      e.target.value = '';
+    };
+
+    if ($('jsonFileInput')) $('jsonFileInput').onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!parsed || !parsed.rallies || !parsed.meta || !parsed.rules) {
+        alert('JSON no válido.');
+        return;
+      }
+      state.project = parsed;
+      state.project.rallies = state.project.rallies.map(r => ({ note: '', ...r }));
+      state.pendingServeTime = null;
+      state.pendingComment = '';
+      state.selectedRallyId = null;
+      state.undoStack = [];
+      state.redoStack = [];
+      state.lastLoadedProjectName = file.name;
+      render();
+      e.target.value = '';
+      alert('Proyecto cargado. Ahora selecciona manualmente el vídeo local correspondiente.');
+    };
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.onclick = () => { state.activeTab = btn.dataset.tab; render(); };
+    });
+
+    $('playPauseBtn').onclick = () => togglePlay();
+    $('back1sBtn').onclick = () => stepTime(-1);
+    $('fwd1sBtn').onclick = () => stepTime(1);
+    $('back5sBtn').onclick = () => stepTime(-5);
+    $('fwd5sBtn').onclick = () => stepTime(5);
+    $('backFrameBtn').onclick = () => stepFrame(-1);
+    $('fwdFrameBtn').onclick = () => stepFrame(1);
+    $('overlayServeBtn').onclick = markServe;
+    $('overlayWinnerABtn').onclick = () => registerWinner('A');
+    $('overlayWinnerBBtn').onclick = () => registerWinner('B');
+    $('overlayFixBtn').onclick = fixLastRally;
+    $('overlayUndoBtn').onclick = undo;
+    $('overlayRedoBtn').onclick = redo;
+    $('overlayLockBtn').onclick = toggleOverlayLock;
+    $('fullscreenBtn').onclick = () => video.requestFullscreen?.();
+
+    const commentInput = $('pendingCommentInput');
+    if (commentInput) commentInput.oninput = (e) => { state.pendingComment = e.target.value; };
+    if ($('overlayCommentToggleBtn')) $('overlayCommentToggleBtn').onclick = () => { state.showCommentBox = !state.showCommentBox; render(); };
+    if ($('overlayCommentCloseBtn')) $('overlayCommentCloseBtn').onclick = () => { state.showCommentBox = false; render(); };
+
+    $('rateSelect').onchange = (e) => { video.playbackRate = parseFloat(e.target.value); };
+    $('fpsInput').onchange = (e) => {
+      const v = parseInt(e.target.value, 10);
+      if (v > 0) state.frameRate = v;
+      render();
+    };
+
+    $('seekRange').oninput = (e) => {
+      if (!Number.isFinite(video.duration)) return;
+      video.currentTime = (parseFloat(e.target.value) / 1000) * video.duration;
+    };
+
+    video.onloadedmetadata = () => {
+      syncVideoUI();
+      if (state.project.videoFingerprint) validateCurrentVideoAgainstProject();
+    };
+    video.ontimeupdate = syncVideoUI;
+    video.onseeked = syncVideoUI;
+    video.onplay = syncVideoUI;
+    video.onpause = syncVideoUI;
+
+    bindSearchEvents();
+    bindEditorEvents();
+    bindConfigEvents();
+    bindHistoryJumpEvents();
+
+    document.onkeydown = (e) => {
+      const tag = document.activeElement?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+      if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+      if (e.key.toLowerCase() === 's') { e.preventDefault(); markServe(); }
+      if (e.key.toLowerCase() === 'a') { e.preventDefault(); registerWinner('A'); }
+      if (e.key.toLowerCase() === 'l') { e.preventDefault(); registerWinner('B'); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); e.shiftKey ? stepFrame(-1) : stepTime(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); e.shiftKey ? stepFrame(1) : stepTime(1); }
+    };
+  }
+
+  function bindSearchEvents() {
+    const btn = document.getElementById('searchScoreBtn');
+    if (!btn) return;
+    btn.onclick = () => {
+      const setN = parseInt(document.getElementById('searchSet').value, 10);
+      const a = parseInt(document.getElementById('searchA').value, 10);
+      const b = parseInt(document.getElementById('searchB').value, 10);
+      const results = computeRallyStates().filter(x => x.setNumber === setN && x.scoreA === a && x.scoreB === b);
+      const box = document.getElementById('searchResults');
+      if (!results.length) {
+        box.innerHTML = '<div class="empty">No hay coincidencias para ese marcador.</div>';
+        return;
+      }
+      box.innerHTML = results.map(r => `
+        <div class="match-item">
+          <div><strong>Set ${r.setNumber} · ${r.scoreA}-${r.scoreB}</strong></div>
+          <div class="muted">Rally ${r.index + 1} · saque ${formatTime(r.serveTime)}</div>
+          ${r.note ? `<div class="muted" style="margin-top:6px;">Comentario: ${escapeHtml(r.note)}</div>` : ''}
+          <div class="log-actions"><button class="jump-search-btn small" data-id="${r.id}">Ir al saque</button></div>
+        </div>
+      `).join('');
+      box.querySelectorAll('.jump-search-btn').forEach(btn => btn.onclick = () => jumpToRally(btn.dataset.id));
+    };
+  }
+
+  function bindEditorEvents() {
+    const saveBtn = document.getElementById('saveEditBtn');
+    if (saveBtn) saveBtn.onclick = saveEditedRally;
+    const delBtn = document.getElementById('deleteEditBtn');
+    if (delBtn) delBtn.onclick = deleteSelectedRally;
+    const insBtn = document.getElementById('insertAfterEditBtn');
+    if (insBtn) insBtn.onclick = insertAfterSelectedRally;
+    document.querySelectorAll('.select-rally-btn').forEach(btn => btn.onclick = () => { state.selectedRallyId = btn.dataset.id; render(); });
+  }
+
+  function bindConfigEvents() {
+    const btn = document.getElementById('applyConfigBtn');
+    if (!btn) return;
+    btn.onclick = () => {
+      const next = structuredClone(state.project);
+      next.meta.competition = document.getElementById('competitionInput').value.trim();
+      next.meta.date = document.getElementById('dateInput').value;
+      next.meta.teamA = document.getElementById('teamAInput').value.trim() || 'Equipo A';
+      next.meta.teamB = document.getElementById('teamBInput').value.trim() || 'Equipo B';
+      next.rules.bestOf = parseInt(document.getElementById('bestOfInput').value, 10) || 5;
+      next.rules.setsToWin = parseInt(document.getElementById('setsToWinInput').value, 10) || Math.ceil(next.rules.bestOf / 2);
+      next.rules.regularSetPoints = parseInt(document.getElementById('regularSetPointsInput').value, 10) || 25;
+      next.rules.finalSetPoints = parseInt(document.getElementById('finalSetPointsInput').value, 10) || 15;
+      next.initial.firstServer = document.getElementById('firstServerInput').value;
+      const fps = parseInt(document.getElementById('fpsConfigInput').value, 10);
+      if (fps > 0) state.frameRate = fps;
+      pushUndo();
+      state.project = next;
+      render();
+    };
+    const manualBtn = document.getElementById('manualSetEndBtn');
+    if (manualBtn) manualBtn.onclick = manualSetEnd;
+  }
+
+  function bindHistoryJumpEvents() {
+    document.querySelectorAll('.jump-rally-btn').forEach(btn => btn.onclick = () => jumpToRally(btn.dataset.id));
+  }
+
+  async function loadVideoFile(file) {
+    state.videoFile = file;
+    if (state.videoUrl) URL.revokeObjectURL(state.videoUrl);
+    state.videoUrl = URL.createObjectURL(file);
+    const video = document.getElementById('video');
+    video.src = state.videoUrl;
+    await waitForMetadata(video);
+    state.project.videoFingerprint = {
+      name: file.name,
+      size: file.size,
+      duration: round(video.duration, 3),
+      type: file.type || '',
+      capturedAt: new Date().toISOString(),
+    };
+    render();
+  }
+
+  function validateCurrentVideoAgainstProject() {
+    const fp = state.project.videoFingerprint;
+    const video = document.getElementById('video');
+    if (!fp || !state.videoFile || !Number.isFinite(video.duration)) return;
+    const sameName = fp.name === state.videoFile.name;
+    const sameSize = fp.size === state.videoFile.size;
+    const sameDuration = Math.abs(fp.duration - round(video.duration, 3)) < 0.05;
+    if (!(sameName && sameSize && sameDuration)) {
+      alert('Advertencia: el vídeo cargado no coincide con la huella del proyecto (nombre, tamaño o duración).');
+    }
+  }
+
+  function toggleOverlayLock() {
+    state.overlayLocked = !state.overlayLocked;
+    render();
+  }
+
+  function markServe() {
+    if (state.overlayLocked) return;
+    const video = document.getElementById('video');
+    if (!Number.isFinite(video.currentTime)) {
+      alert('Carga un vídeo antes de registrar un saque.');
+      return;
+    }
+    state.pendingServeTime = round(video.currentTime, 3);
+    render();
+  }
+
+  function registerWinner(winner) {
+    if (state.overlayLocked) return;
+    if (state.pendingServeTime == null) {
+      alert('Primero debes marcar el instante del saque.');
+      return;
+    }
+    pushUndo();
+    state.project.rallies.push({
+      id: crypto.randomUUID(),
+      serveTime: state.pendingServeTime,
+      winner,
+      note: state.pendingComment.trim(),
+      createdAt: new Date().toISOString(),
+    });
+    state.pendingServeTime = null;
+    state.pendingComment = '';
+    state.selectedRallyId = state.project.rallies[state.project.rallies.length - 1].id;
+    render();
+  }
+
+  function fixLastRally() {
+    const last = state.project.rallies[state.project.rallies.length - 1];
+    if (!last) { alert('No hay rallies para corregir.'); return; }
+    state.selectedRallyId = last.id;
+    state.activeTab = 'gestion';
+    render();
+  }
+
+  function manualSetEnd() {
+    const current = getCurrentState();
+    const winner = prompt(`Finalizar set ${current.setNumber} manualmente. Ganador: A o B`, current.scoreA >= current.scoreB ? 'A' : 'B');
+    if (!winner || !['A','B','a','b'].includes(winner)) return;
+    pushUndo();
+    state.project.manualSetEnds.push({
+      rallyId: state.project.rallies[state.project.rallies.length - 1]?.id || null,
+      setNumber: current.setNumber,
+      winner: winner.toUpperCase(),
+      scoreA: current.scoreA,
+      scoreB: current.scoreB,
+    });
+    render();
+  }
+
+  function saveEditedRally() {
+    const selected = getSelectedRally();
+    if (!selected) return;
+    const timeInput = document.getElementById('editServeTime');
+    const winnerInput = document.getElementById('editWinner');
+    const noteInput = document.getElementById('editNote');
+    const newTime = parseFloat(timeInput.value);
+    if (!Number.isFinite(newTime) || newTime < 0) { alert('Tiempo de saque no válido.'); return; }
+    if (!confirm('Se recalcularán automáticamente los marcadores y turnos posteriores. ¿Continuar?')) return;
+    pushUndo();
+    selected.serveTime = round(newTime, 3);
+    selected.winner = winnerInput.value;
+    selected.note = noteInput.value;
+    render();
+  }
+
+  function deleteSelectedRally() {
+    const selected = getSelectedRally();
+    if (!selected) return;
+    if (!confirm('Se borrará el rally y se recalcularán automáticamente los marcadores y turnos posteriores. ¿Continuar?')) return;
+    pushUndo();
+    state.project.rallies = state.project.rallies.filter(r => r.id !== selected.id);
+    state.selectedRallyId = null;
+    render();
+  }
+
+  function insertAfterSelectedRally() {
+    const selected = getSelectedRally();
+    if (!selected) return;
+    const serveTime = parseFloat(prompt('Tiempo de saque del nuevo rally (segundos):', String(selected.serveTime)));
+    if (!Number.isFinite(serveTime) || serveTime < 0) return;
+    const winner = prompt('Ganador del rally insertado: A o B', 'A');
+    if (!winner || !['A','B','a','b'].includes(winner)) return;
+    const note = prompt('Comentario del rally insertado (opcional):', '') || '';
+    if (!confirm('Se insertará el rally y se recalcularán automáticamente los marcadores y turnos posteriores. ¿Continuar?')) return;
+    pushUndo();
+    const idx = state.project.rallies.findIndex(r => r.id === selected.id);
+    state.project.rallies.splice(idx + 1, 0, {
+      id: crypto.randomUUID(),
+      serveTime: round(serveTime, 3),
+      winner: winner.toUpperCase(),
+      note,
+      createdAt: new Date().toISOString(),
+    });
+    render();
+  }
+
+  function jumpToRally(id) {
+    const rally = state.project.rallies.find(r => r.id === id);
+    if (!rally) return;
+    const video = document.getElementById('video');
+    video.currentTime = rally.serveTime;
+    state.selectedRallyId = id;
+    render();
+  }
+
+  function togglePlay() {
+    const video = document.getElementById('video');
+    if (video.paused) video.play(); else video.pause();
+  }
+  function stepTime(delta) {
+    const video = document.getElementById('video');
+    video.currentTime = Math.max(0, (video.currentTime || 0) + delta);
+  }
+  function stepFrame(frames) { stepTime(frames / (state.frameRate || 30)); }
+
+  function getCurrentState() {
+    const list = computeRallyStates();
+    if (!list.length) {
+      return {
+        setNumber: state.project.initial.startSet,
+        scoreA: state.project.initial.startScoreA,
+        scoreB: state.project.initial.startScoreB,
+        setsA: state.project.initial.startSetsA,
+        setsB: state.project.initial.startSetsB,
+        server: state.project.initial.firstServer,
+      };
+    }
+    const last = list[list.length - 1];
+    return {
+      setNumber: last.nextSetNumber,
+      scoreA: last.nextScoreA,
+      scoreB: last.nextScoreB,
+      setsA: last.nextSetsA,
+      setsB: last.nextSetsB,
+      server: last.nextServer,
+    };
+  }
+
+  function computeRallyStates() {
+    let setNumber = state.project.initial.startSet || 1;
+    let scoreA = state.project.initial.startScoreA || 0;
+    let scoreB = state.project.initial.startScoreB || 0;
+    let setsA = state.project.initial.startSetsA || 0;
+    let setsB = state.project.initial.startSetsB || 0;
+    let server = state.project.initial.firstServer || 'A';
+
+    const out = [];
+    for (let i = 0; i < state.project.rallies.length; i++) {
+      const rally = state.project.rallies[i];
+      if (rally.winner === 'A') scoreA += 1; else scoreB += 1;
+      server = rally.winner;
+      let nextSetNumber = setNumber;
+      let nextScoreA = scoreA;
+      let nextScoreB = scoreB;
+      let nextSetsA = setsA;
+      let nextSetsB = setsB;
+      let setEnded = false;
+      let endedByManual = false;
+
+      const manual = state.project.manualSetEnds.find(x => x.rallyId === rally.id && x.setNumber === setNumber);
+      if (manual) {
+        setEnded = true;
+        endedByManual = true;
+      } else if (isSetWon(scoreA, scoreB, setNumber)) {
+        setEnded = true;
+      }
+
+      if (setEnded) {
+        if (scoreA > scoreB) nextSetsA += 1; else nextSetsB += 1;
+        nextSetNumber += 1;
+        nextScoreA = 0;
+        nextScoreB = 0;
+      }
+
+      out.push({
+        note: '',
+        ...rally,
+        index: i,
+        setNumber,
+        scoreA,
+        scoreB,
+        setsA,
+        setsB,
+        serverBefore: i === 0 ? (state.project.initial.firstServer || 'A') : out[i - 1].nextServer,
+        nextSetNumber,
+        nextScoreA,
+        nextScoreB,
+        nextSetsA,
+        nextSetsB,
+        nextServer: server,
+        setEnded,
+        endedByManual,
+      });
+
+      setNumber = nextSetNumber;
+      scoreA = nextScoreA;
+      scoreB = nextScoreB;
+      setsA = nextSetsA;
+      setsB = nextSetsB;
+    }
+    return out;
+  }
+
+  function isSetWon(scoreA, scoreB, setNumber) {
+    const maxSets = state.project.rules.bestOf || 5;
+    const isFinalSet = setNumber === maxSets;
+    const target = isFinalSet ? state.project.rules.finalSetPoints : state.project.rules.regularSetPoints;
+    const maxScore = Math.max(scoreA, scoreB);
+    const minScore = Math.min(scoreA, scoreB);
+    return maxScore >= target && (!state.project.rules.winByTwo || maxScore - minScore >= 2);
+  }
+
+  function renderRecentRallies(n) {
+    const list = computeRallyStates().slice(-n).reverse();
+    if (!list.length) return '<div class="empty">Todavía no hay rallies registrados.</div>';
+    return list.map(r => renderRallyItem(r, true)).join('');
+  }
+
+  function renderAllRallies() {
+    const list = computeRallyStates();
+    if (!list.length) return '<div class="empty">Todavía no hay rallies registrados.</div>';
+    return list.map(r => renderRallyItem(r, false)).join('');
+  }
+
+  function renderRallyItem(r, compact) {
+    const selected = state.selectedRallyId === r.id ? 'active' : '';
+    return `
+      <div class="log-item ${selected}">
+        <div class="log-top">
+          <div><strong>Set ${r.setNumber} · ${r.scoreA}-${r.scoreB}</strong></div>
+          <div class="muted">${formatTime(r.serveTime)}</div>
+        </div>
+        <div class="muted">Rally ${r.index + 1} · saca ${r.serverBefore === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)} · punto para ${r.winner === 'A' ? escapeHtml(state.project.meta.teamA) : escapeHtml(state.project.meta.teamB)}${r.setEnded ? ' · fin de set' : ''}</div>
+        ${r.note ? `<div style="margin-top:6px;">${escapeHtml(r.note)}</div>` : ''}
+        ${compact ? '' : `<div class="log-actions"><button class="select-rally-btn small" data-id="${r.id}">Editar</button><button class="jump-rally-btn small" data-id="${r.id}">Ir al saque</button></div>`}
+      </div>
+    `;
+  }
+
+  function renderEditor() {
+    const r = computeRallyStates().find(x => x.id === state.selectedRallyId);
+    if (!r) return '<div class="empty">Selecciona un rally del historial para editarlo.</div>';
+    return `
+      <div class="stack" style="margin-top:10px;">
+        <div><strong>Rally ${r.index + 1}</strong></div>
+        <div class="row">
+          <div><label>Tiempo del saque (s)</label><input id="editServeTime" type="number" step="0.001" min="0" value="${r.serveTime}" /></div>
+          <div><label>Ganador</label><select id="editWinner"><option value="A" ${r.winner==='A'?'selected':''}>${escapeHtml(state.project.meta.teamA)}</option><option value="B" ${r.winner==='B'?'selected':''}>${escapeHtml(state.project.meta.teamB)}</option></select></div>
+        </div>
+        <div><label>Comentario</label><textarea id="editNote" rows="4">${escapeHtml(r.note || '')}</textarea></div>
+        <div class="muted">Marcador registrado en este rally: set ${r.setNumber} · ${r.scoreA}-${r.scoreB}</div>
+        <div class="log-actions">
+          <button id="saveEditBtn" class="primary">Guardar cambios</button>
+          <button id="insertAfterEditBtn">Insertar después</button>
+          <button id="deleteEditBtn" class="danger">Borrar rally</button>
+          <button class="jump-rally-btn" data-id="${r.id}">Ir al saque</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function saveProjectJson() {
+    state.project.savedAt = new Date().toISOString();
+    const blob = new Blob([JSON.stringify(state.project, null, 2)], { type: 'application/json' });
+    downloadBlob(blob, safeFileName(`${state.project.meta.teamA}_vs_${state.project.meta.teamB || 'partido'}.json`));
+  }
+
+  function exportCsv() {
+    const rows = computeRallyStates();
+    const headers = ['rally','set','score_a','score_b','sets_a','sets_b','serve_time','server_before','winner','comment','set_ended','manual_set_end','team_a','team_b'];
+    const csv = [headers.join(',')].concat(rows.map(r => [
+      r.index + 1,
+      r.setNumber,
+      r.scoreA,
+      r.scoreB,
+      r.setsA,
+      r.setsB,
+      r.serveTime,
+      r.serverBefore,
+      r.winner,
+      csvEscape(r.note || ''),
+      r.setEnded ? 1 : 0,
+      r.endedByManual ? 1 : 0,
+      csvEscape(state.project.meta.teamA),
+      csvEscape(state.project.meta.teamB),
+    ].join(','))).join('\n');
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }), safeFileName(`${state.project.meta.teamA}_vs_${state.project.meta.teamB}_rallies.csv`));
+  }
+
+  function getSelectedRally() { return state.project.rallies.find(r => r.id === state.selectedRallyId); }
+
+  function syncVideoUI() {
+    const video = document.getElementById('video');
+    const current = document.getElementById('currentTimeLabel');
+    const duration = document.getElementById('durationLabel');
+    const seek = document.getElementById('seekRange');
+    const playBtn = document.getElementById('playPauseBtn');
+    if (!video || !current || !duration || !seek) return;
+    current.textContent = formatTime(video.currentTime || 0);
+    duration.textContent = Number.isFinite(video.duration) ? formatTime(video.duration) : '00:00.000';
+    if (playBtn) playBtn.textContent = video.paused ? '▶' : '⏸';
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      seek.value = String(Math.round((video.currentTime / video.duration) * 1000));
+    }
+  }
+
+  function pushUndo() {
+    state.undoStack.push(JSON.stringify(state.project));
+    if (state.undoStack.length > 100) state.undoStack.shift();
+    state.redoStack = [];
+  }
+  function undo() {
+    if (!state.undoStack.length) return;
+    state.redoStack.push(JSON.stringify(state.project));
+    state.project = JSON.parse(state.undoStack.pop());
+    render();
+  }
+  function redo() {
+    if (!state.redoStack.length) return;
+    state.undoStack.push(JSON.stringify(state.project));
+    state.project = JSON.parse(state.redoStack.pop());
+    render();
+  }
+
+  function formatTime(sec) {
+    sec = Math.max(0, sec || 0);
+    const mins = Math.floor(sec / 60);
+    const secs = Math.floor(sec % 60);
+    const ms = Math.round((sec - Math.floor(sec)) * 1000);
+    return `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+  }
+  function round(n, d = 3) { return Number(n.toFixed(d)); }
+  function safeFileName(s) { return s.replace(/[^a-z0-9_\-.]+/gi, '_'); }
+  function csvEscape(v) { return `"${String(v).replaceAll('"', '""')}"`; }
+  function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function escapeAttr(s) { return escapeHtml(s); }
+  function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function waitForMetadata(video) {
+    return new Promise(resolve => {
+      if (Number.isFinite(video.duration) && video.duration > 0) return resolve();
+      video.onloadedmetadata = () => { syncVideoUI(); if (state.project.videoFingerprint) validateCurrentVideoAgainstProject(); resolve(); };
+    });
+  }
+  function videoMetaLabel() {
+    if (!state.videoFile || !state.project.videoFingerprint) return 'Sin vídeo o sin huella registrada.';
+    return `${state.project.videoFingerprint.name} · ${Math.round(state.project.videoFingerprint.size / 1024 / 1024 * 10)/10} MB · ${state.project.videoFingerprint.duration}s`;
+  }
+})();
+
+</script>
+</body>
+</html>
